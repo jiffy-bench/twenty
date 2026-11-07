@@ -193,7 +193,7 @@ jobs:
           fi
       - name: Tensile selection (shadow)
         id: tensile
-        uses: rsyed94/tensile-action@6b066ae7ea7bb376b7049fb7ef952b0fde0ba336
+        uses: rsyed94/tensile-action@bf465a2f8f66e7225ed32003c1661ee984aa33d3
         continue-on-error: true
         with:
           phase: select
@@ -204,8 +204,42 @@ jobs:
           check-run-id: ${{ job.check_run_id }}
           matrix-key: ${{ toJSON(matrix) }}
           report: .jiffy/no-report.json
+      - name: Tensile jest recorder
+        id: tensile-record
+        if: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (true) }}
+        continue-on-error: true
+        uses: rsyed94/tensile-action/jest@bf465a2f8f66e7225ed32003c1661ee984aa33d3
+        with:
+          step: setup
+          working-directory: packages/twenty-server
+          config: jest.config.mjs
+          in-place: "true"
       - name: Server / Run Tests (shard ${{ matrix.shard }}/4)
         run: npx nx run twenty-server:test:ci --shard=${{ matrix.shard }}/4
+      - name: Tensile jest collect
+        if: ${{ !cancelled() && steps.tensile-record.outcome != 'skipped' }}
+        continue-on-error: true
+        uses: rsyed94/tensile-action/jest@bf465a2f8f66e7225ed32003c1661ee984aa33d3
+        with:
+          step: collect
+      - name: "Replay farm: send the coverage to Tensile"
+        if: ${{ success() && steps.tensile-record.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          SERVER: https://jiffy-app-production.up.railway.app
+          PART: server-test-${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          cd "$GITHUB_WORKSPACE/.jiffy" 2>/dev/null || { echo "::warning::no .jiffy directory: nothing recorded"; exit 0; }
+          parts=(coverage-*.json)
+          [ ${#parts[@]} -gt 0 ] || { echo "::warning::no coverage to send"; exit 0; }
+          token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=jiffy" | jq -r .value)
+          echo "::add-mask::$token"
+          put() { curl -sS --fail-with-body -X PUT -H "Authorization: Bearer $token" -H "content-type: application/json" --data-binary @"$1" "$SERVER/v1/maps/$GITHUB_REPOSITORY/$GITHUB_SHA/$2/$3"; echo; }
+          for f in "${parts[@]}"; do case "$f" in *-nodes.json | *-nodes.always-run.json) continue;; esac; put "$f" parts "$PART-${f%.json}"; done
+          for f in report-*.json; do put "$f" durations "$PART-${f%.json}"; done
       - name: Save jest transform cache
         if: always() && steps.restore-jest-cache.outputs.cache-hit != 'true' && format('{0}', github.event.pull_request.head.repo.fork) != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0 (save)
