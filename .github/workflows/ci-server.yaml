@@ -181,6 +181,29 @@ jobs:
           key: v4-jest-server-unit-${{ matrix.shard }}-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: v4-jest-server-unit-${{ matrix.shard }}-${{ github.ref_name }}-
           path: .cache/jest/packages/twenty-server
+      - name: "Replay farm: fetch the PR base for Tensile"
+        if: ${{ github.event_name == 'pull_request' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            git fetch --no-tags --quiet --depth=100 origin "$BASE" "$GITHUB_SHA"
+          fi
+      - name: Tensile selection (shadow)
+        id: tensile
+        uses: rsyed94/tensile-action@6b066ae7ea7bb376b7049fb7ef952b0fde0ba336
+        continue-on-error: true
+        with:
+          phase: select
+          mode: shadow
+          runner: jest
+          root: packages/twenty-server
+          service-url: https://jiffy-app-production.up.railway.app
+          check-run-id: ${{ job.check_run_id }}
+          matrix-key: ${{ toJSON(matrix) }}
+          report: .jiffy/no-report.json
       - name: Server / Run Tests (shard ${{ matrix.shard }}/4)
         run: npx nx run twenty-server:test:ci --shard=${{ matrix.shard }}/4
       - name: Save jest transform cache
@@ -189,3 +212,6 @@ jobs:
         with:
           key: ${{ steps.restore-jest-cache.outputs.cache-primary-key }}
           path: .cache/jest/packages/twenty-server
+    permissions:
+      contents: read
+      id-token: write
