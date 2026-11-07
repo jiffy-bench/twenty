@@ -45,6 +45,27 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 10
+      - name: "Replay farm: restore upstream's CI files (upstream's tests read them)"
+        shell: bash
+        run: |
+          set -eu
+          cd "$GITHUB_WORKSPACE"
+          src=.github/replay-farm/upstream
+          [ -d "$src" ] || exit 0
+          list="$RUNNER_TEMP/replay-farm-restore"
+          (cd "$src" && find . -type f | sed 's|^\./||') > "$list"
+          if git rev-parse --git-dir >/dev/null 2>&1; then
+            git --literal-pathspecs ls-files -z -- .github/replay-farm | xargs -0 -r git --literal-pathspecs update-index --skip-worktree --
+            exclude="$(git rev-parse --git-path info/exclude)"
+            mkdir -p "$(dirname "$exclude")"
+            while IFS= read -r f; do
+              if git --literal-pathspecs ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+                git --literal-pathspecs update-index --skip-worktree -- "$f"
+              else printf '/%s\n' "$(printf '%s' "$f" | sed 's/[][*?\\!#]/\\&/g')" >> "$exclude"; fi
+            done < "$list"
+          fi
+          cp -R "$src/." .
+          rm -rf .github/replay-farm
       - name: Install dependencies
         uses: ./.github/actions/yarn-install
       - name: Restore server build cache
@@ -74,6 +95,27 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 10
+      - name: "Replay farm: restore upstream's CI files (upstream's tests read them)"
+        shell: bash
+        run: |
+          set -eu
+          cd "$GITHUB_WORKSPACE"
+          src=.github/replay-farm/upstream
+          [ -d "$src" ] || exit 0
+          list="$RUNNER_TEMP/replay-farm-restore"
+          (cd "$src" && find . -type f | sed 's|^\./||') > "$list"
+          if git rev-parse --git-dir >/dev/null 2>&1; then
+            git --literal-pathspecs ls-files -z -- .github/replay-farm | xargs -0 -r git --literal-pathspecs update-index --skip-worktree --
+            exclude="$(git rev-parse --git-path info/exclude)"
+            mkdir -p "$(dirname "$exclude")"
+            while IFS= read -r f; do
+              if git --literal-pathspecs ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+                git --literal-pathspecs update-index --skip-worktree -- "$f"
+              else printf '/%s\n' "$(printf '%s' "$f" | sed 's/[][*?\\!#]/\\&/g')" >> "$exclude"; fi
+            done < "$list"
+          fi
+          cp -R "$src/." .
+          rm -rf .github/replay-farm
       - name: Install dependencies
         uses: ./.github/actions/yarn-install
       - name: Build twenty-shared
@@ -103,6 +145,27 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 10
+      - name: "Replay farm: restore upstream's CI files (upstream's tests read them)"
+        shell: bash
+        run: |
+          set -eu
+          cd "$GITHUB_WORKSPACE"
+          src=.github/replay-farm/upstream
+          [ -d "$src" ] || exit 0
+          list="$RUNNER_TEMP/replay-farm-restore"
+          (cd "$src" && find . -type f | sed 's|^\./||') > "$list"
+          if git rev-parse --git-dir >/dev/null 2>&1; then
+            git --literal-pathspecs ls-files -z -- .github/replay-farm | xargs -0 -r git --literal-pathspecs update-index --skip-worktree --
+            exclude="$(git rev-parse --git-path info/exclude)"
+            mkdir -p "$(dirname "$exclude")"
+            while IFS= read -r f; do
+              if git --literal-pathspecs ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+                git --literal-pathspecs update-index --skip-worktree -- "$f"
+              else printf '/%s\n' "$(printf '%s' "$f" | sed 's/[][*?\\!#]/\\&/g')" >> "$exclude"; fi
+            done < "$list"
+          fi
+          cp -R "$src/." .
+          rm -rf .github/replay-farm
       - name: Install dependencies
         uses: ./.github/actions/yarn-install
       - name: Restore server build cache
