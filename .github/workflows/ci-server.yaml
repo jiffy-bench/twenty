@@ -203,6 +203,7 @@ jobs:
           service-url: https://jiffy-app-production.up.railway.app
           check-run-id: ${{ job.check_run_id }}
           matrix-key: ${{ toJSON(matrix) }}
+          shard: ${{ matrix.shard }}/${{ strategy.job-total }}
           report: .jiffy/no-report.json
       - name: Tensile jest recorder
         id: tensile-record
