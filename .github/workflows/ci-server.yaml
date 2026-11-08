@@ -33,6 +33,9 @@ jobs:
         packages/twenty-client-sdk/**
         packages/twenty-emails/**
         packages/twenty-shared/**
+        .github/actions/spawn-twenty-server/**
+        .github/actions/test-twenty-app/**
+        .github/workflows/ci-server.yaml
 
   server-build:
     needs:
